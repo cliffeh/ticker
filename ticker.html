@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<meta charset=utf-8>
+
+<head>
+    <script>
+        /* NOTE: change these values if you'd prefer different defaults */
+        const DEFAULT_START_INTERVAL_IN_SECONDS = 60 * 60; // 60 minutes
+        const DEFAULT_STEP_IN_SECONDS = 1 * 60; // 1 minute
+    </script>
+    <title>ticker</title>
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        svg {
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <svg id="tickerSvg" width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <rect id="tickerRect" x="0" y="0" width="100%" height="100%" fill="red"></rect>
+        <text id="tickerText" visibility="hidden" x="10" y="55" fill="white"></text>
+    </svg>
+    <script>
+        var creationTime, startInterval, step, lastTap, nTaps;
+        var svg, rect, text;
+
+        function getParameterByName(name, url) {
+            if (!url) url = window.location.href;
+            name = name.replace(/[\[\]]/g, '\\$&');
+            var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
+                results = regex.exec(url);
+            if (!results) return null;
+            if (!results[2]) return '';
+            return decodeURIComponent(results[2].replace(/\+/g, ' '));
+        }
+
+        function initTicker() {
+            var now = Date.now();
+            creationTime = +getParameterByName('creationTime') || now;
+            lastTap = +getParameterByName('lastTap') || now;
+            nTaps = +getParameterByName('nTaps') || 0;
+            startInterval = +getParameterByName('startInterval') || DEFAULT_START_INTERVAL_IN_SECONDS;
+            step = +getParameterByName('step') || DEFAULT_STEP_IN_SECONDS;
+
+            svg = document.getElementById('tickerSvg');
+            rect = document.getElementById('tickerRect');
+            text = document.getElementById('tickerText');
+
+            rect.onmousedown = onHold;
+            rect.onmouseup = onRelease;
+
+            rect.ontouchstart = onHold;
+            rect.ontouchend = onRelease;
+
+            updateTicker();
+        }
+
+        function onHold(event) {
+            event.preventDefault();
+            text.setAttribute('visibility', 'visible');
+        }
+
+        function onRelease(event) {
+            event.preventDefault();
+            if (getSecsLeft() <= 0) {
+                rect.setAttribute('fill', 'red');
+                lastTap = Date.now();
+                nTaps++;
+                var loc = location.href.split('?')[0];
+                var queryString =
+                    '?creationTime=' + creationTime +
+                    '&lastTap=' + lastTap +
+                    '&nTaps=' + nTaps +
+                    '&startInterval=' + startInterval +
+                    '&step=' + step;
+                location.replace(loc + queryString);
+            }
+            text.setAttribute('visibility', 'hidden');
+        }
+
+        function getSecsLeft() {
+            var timeDiff = (Date.now() - lastTap) / 1000;
+            return (startInterval + (step * nTaps)) - timeDiff;
+        }
+
+        function updateTicker() {
+            var secsLeft = getSecsLeft();
+            if (secsLeft <= 0) {
+                rect.setAttribute('fill', 'green');
+            }
+            text.innerHTML = parseInt(secsLeft);
+            setTimeout(updateTicker, 1000);
+        }
+
+        initTicker();
+    </script>
+</body>
+
+</html>
